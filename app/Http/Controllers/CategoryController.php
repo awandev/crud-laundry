@@ -88,9 +88,10 @@ class CategoryController extends Controller
         // adapun withCount() serupa dengan eager loading yang menggunakan WITH()
         // hanya saja withCount() returnnya adalah integer
         // jadi nanti hasil querynya akan menambah field baru bernama child_count yang berisi jumlah data anak kategori
-        $category = Category::withCount(['child'])->find($id);
+        $category = Category::withCount(['child','product'])->find($id);
         // jika kategori ini tidak digunakan sebagai parent atau childnya = 0
-        if ($category->child_count == 0)
+        // kemudian pada if statementnya kita cek juga jika = 0
+        if ($category->child_count == 0 && $category->product_count == 0)
         {
             // maka hapus kategori ini
             $category->delete();

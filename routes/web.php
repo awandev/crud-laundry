@@ -39,4 +39,6 @@ Route::group(['prefix' => 'administrator', 'middleware' => 'auth'], function() {
     // Route::get('/category/create', 'CategoryController@create')->name('category.create');
 
 });
+
+Route::resource('product', 'ProductController');
 Route::get('/home', 'HomeController@index')->name('home');
