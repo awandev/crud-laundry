@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 // load model product
 use App\Product; 
 Use App\Category;
+Use App\Jobs\ProductJob;
 
 use Illuminate\Support\Str;
 Use File;
@@ -88,4 +89,90 @@ class ProductController extends Controller
         // dan redirect ke halaman list product
         return redirect(route('product.index'))->with(['success' => 'Produk Sudah Dihapus']);
     }
+
+    public function edit($id)
+    {
+        $product = Product::find($id); // ambil data produk terkait berdasarkan ID
+        $category = Category::orderBy('name', 'DESC')->get(); // ambil semua data kategori
+        return view('products.edit', compact('product','category')); // load view dan passing datanya ke view
+    }
+
+    public function update(Request $request, $id)
+    {
+        // validasi data yang dikirim
+        $this->validate($request, [
+            'name'          => 'required|string|max:100',
+            'description'   => 'required',
+            'category_id'   => 'required|exists:categories,id',
+            'price'         => 'required|integer',
+            'weight'        => 'required|integer',
+            'image'         => 'nullable|image|mimes:png,jpeg,jpg'  //image bisa nullable
+        ]);
+
+        // ambil data produk yang akan diedit berdasarkan id
+        $product = Product::find($id);
+        // simpan sementara nama file image saat ini
+        $filename = $product->image;
+
+        // jika ada file gambar yang dikirim
+        if($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = time() . Str::slug($request->name) . '.' . $file->getClientOriginalExtension();
+
+            // maka upload file tersebut
+            $file->storeAs('public/products', $filename);
+
+            // dan hapus file gambar yang lama
+            File::delete(storage_path('app/public/products/' . $product->image));
+        }
+
+        // lalu update produk tersebut
+        $product->update([
+            'name'          => $request->name,
+            'description'   => $request->description,
+            'category_id'   => $request->category_id,
+            'price'         => $request->price,
+            'weight'        => $request->weight,
+            'image'         => $filename
+        ]);
+
+        // redirect ke halaman produk dan tampilkan session sukses
+        return redirect(route('product.index'))->with(['success' => 'Data Produk Diperbaharui']);
+    }
+
+
+    
+    public function massUploadForm()
+    {
+        // untuk upload massal
+        $category = Category::orderBy('name','DESC')->get();
+        return view('products.bulk', compact('category'));
+    }
+
+    public function massUpload(Request $request)
+    {
+        // validasi data yang dikirim
+        $this->validate($request,[
+            'category_id'   => 'required|exists:categories,id',
+            'file'          => 'required|mimes:xlsx'
+        ]);
+
+        // jika filenya ada
+        if ($request->hasFile('file'))
+        {
+            $file = $request->file('file');
+            $filename = time() . '-product.' . $file->getClientOriginalExtension();
+            $file->storeAs('public/uploads', $filename); // maka simpan file tersebut di storage/app/public/uploads
+
+            // buat jadwal untuk proses file tersebut dengan menggunakan job
+            // adapun pada dispatch kita mengirimkan dua parameter sebagai informasi
+            // yakni kategori id dan nama filenya yang sudah disimpan
+            ProductJob::dispatch($request->category_id, $filename);
+            return redirect()->back()->with(['success' => 'upload Produk dijadwalkan']);
+        }
+
+    }
+    
+
+
 }

@@ -40,5 +40,7 @@ Route::group(['prefix' => 'administrator', 'middleware' => 'auth'], function() {
 
 });
 
-Route::resource('product', 'ProductController');
+Route::resource('product', 'ProductController')->except(['show']); // bagian ini kita tambahkan except karena method show tidak digunakan
+Route::get('/product/bulk', 'ProductController@massUploadForm')->name('product.bulk');
+Route::post('/product/bulk', 'ProductController@massUpload')->name('product.saveBulk');
 Route::get('/home', 'HomeController@index')->name('home');
